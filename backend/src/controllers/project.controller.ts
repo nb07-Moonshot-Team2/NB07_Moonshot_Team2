@@ -4,9 +4,9 @@ import * as projectService from '../services/project.service';
 
 export async function createProject(req: Request, res: Response) {
   const validatedData = createdProjectSchema.parse(req.body);
-  const newProject = await projectService.createProject(validatedData, req.userId as string);
+  const newProject = await projectService.createProject({...validatedData, ownerId: req.userId as string});
   res.status(200).send(newProject);
-}
+} 
 
 export async function getProject(req: Request, res: Response) {
   const projectId = req.params.projectId;
