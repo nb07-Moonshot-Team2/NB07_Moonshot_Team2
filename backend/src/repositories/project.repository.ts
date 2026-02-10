@@ -1,72 +1,72 @@
-import { PrismaClient } from '@prisma/client';
-import { Project } from '@prisma/client';
+import { prisma } from '../lib/db';
 
-const prismaClient = new PrismaClient();
-export async function createProject(
-  data: Pick<Project, 'name' | 'description' | 'ownerId'>
-): Promise<Project> {
-  const createdProject = await prismaClient.project.create({ data });
-  return createdProject;
-}
-export async function projectMemberCount(projectId: string): Promise<number> {
-  const membersCount = await prismaClient.project.count({
-    where: {
-      id: projectId,
+export async function createProject(data:{name: string; description?: string | null | undefined; ownerId: string}) {
+  return await prisma.project.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      ownerId: data.ownerId,
     },
   });
-  return membersCount;
 }
-export async function todoCount(projectId: string): Promise<number> {
-  const todoCount = await prismaClient.task.count({
-    where: {
-      projectId: projectId,
+
+export async function getProject(projectId: string) {
+  return await prisma.project.findUnique({
+    where: { id: projectId },
+  });
+}
+
+export async function updateProject(
+  projectId: string,
+  data: { name?: string | undefined; description?: string | null | undefined }
+) {
+  return await prisma.project.update({
+    where: { id: projectId },
+    data : {
+      name: data.name,
+      description: data.description,
     },
   });
-  return todoCount;
 }
-export async function inProgressCount(projectId: string): Promise<number> {
-  const inProgressCount = await prismaClient.task.count({
-    where: {
+
+export async function deleteProject(projectId: string) {
+  return await prisma.project.delete({
+    where: { id: projectId },
+  });
+}
+
+export async function projectOwnerCount(ownerId: string) {
+  return await prisma.project.count({
+    where: { ownerId },
+  });
+} 
+
+export async function projectMemberCount(projectId: string) {
+  return await prisma.projectMember.count({
+    where: { projectId },
+  });
+}
+
+export async function todoCount(projectId: string) {
+  return await prisma.task.count({
+    where: { projectId } , 
+  });
+}
+
+export async function inProgressCount(projectId: string) {
+  return await prisma.task.count({
+    where: { 
       projectId: projectId,
       status: 'IN_PROGRESS',
     },
   });
-  return inProgressCount;
 }
-export async function doneCount(projectId: string): Promise<number> {
-  const doneCount = await prismaClient.task.count({
-    where: {
+
+export async function doneCount(projectId: string) {
+  return await prisma.task.count({
+    where: { 
       projectId: projectId,
       status: 'DONE',
     },
   });
-  return doneCount;
-}
-export async function getProject(projectId: string): Promise<Project | null> {
-  const project = await prismaClient.project.findUnique({
-    where: {
-      id: projectId,
-    },
-  });
-  return project;
-}
-export async function updateProject(
-  projectId: string,
-  data: Pick<Project, 'name' | 'description'>
-): Promise<Project> {
-  const updatedProject = await prismaClient.project.update({
-    where: {
-      id: projectId,
-    },
-    data,
-  });
-  return updatedProject;
-}
-export async function deleteProject(projectId: string) {
-  const deletedProject = await prismaClient.project.delete({
-    where: {
-      id: projectId,
-    },
-  });
-  return deletedProject;
 }

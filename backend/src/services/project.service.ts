@@ -1,82 +1,96 @@
-import { Project } from '@prisma/client';
 import * as projectRepository from '../repositories/project.repository';
 import { InvalidDataFormatError, NotProjectMemberError, NotProjectOwnerError } from '../lib/errors';
+import { CreatedProjectInput } from '../schemas/project.schema';
+import { projectRequestDto,projectUpdateDto } from '../classes/dtos/project.request.dto';
+import { projectResponseDto } from '../classes/dtos/project.response.dto';
+      
+export async function createProject(data: CreatedProjectInput & { ownerId: string }) : Promise<projectResponseDto>   {
+  
+  const dto = new projectRequestDto(data); 
+  const ownerProjectCount = await projectRepository.projectOwnerCount(dto.ownerId);
+  if (ownerProjectCount >= 5) {
+    throw new Error('Project creation limit reached. You can create up to 5 projects.');
+  }
 
-type CreatedProjectData = Pick<Project, 'name' | 'description' | 'ownerId'>;
-
-export async function createProject(data: CreatedProjectData) {
-  const createdProject = await projectRepository.createProject(data);
-  const memebersCount = await projectRepository.projectMemberCount(createdProject.id);
-  const todosCount = await projectRepository.todoCount(createdProject.id);
-  const inProgressesCount = await projectRepository.inProgressCount(createdProject.id);
-  const donesCount = await projectRepository.doneCount(createdProject.id);
-
-  return {
-    ...createdProject,
-    memberCount: memebersCount || 0,
-    todoCount: todosCount || 0,
-    inProgressCount: inProgressesCount || 0,
-    doneCount: donesCount || 0,
-    createAt: undefined,
-    updateAt: undefined,
-  };
+  const createdProject = await projectRepository.createProject({
+    name: dto.name, 
+    description: dto.description, 
+    ownerId: dto.ownerId});
+  
+  return new projectResponseDto({
+    id: createdProject.id,
+    name: createdProject.name,
+    description: createdProject.description,
+    memberCount: (await projectRepository.projectMemberCount(createdProject.id)) ?? 0,
+    todoCount: (await projectRepository.todoCount(createdProject.id)) ?? 0,
+    inProgressCount: (await projectRepository.inProgressCount(createdProject.id)) ?? 0,
+    doneCount: (await projectRepository.doneCount(createdProject.id)) ?? 0
+  });
 }
-export async function getProject(projectId: string) {
+
+export async function getProject(projectId: string) : Promise<projectResponseDto> {
+
   const project = await projectRepository.getProject(projectId);
+  
   if (!project) {
     throw new InvalidDataFormatError();
   }
   if (project.ownerId !== projectId) {
     throw new NotProjectMemberError();
   }
-  const membersCount = await projectRepository.projectMemberCount(projectId);
-  const todosCount = await projectRepository.todoCount(projectId);
-  const inProgressesCount = await projectRepository.inProgressCount(projectId);
-  const donesCount = await projectRepository.doneCount(projectId);
-  return {
-    ...project,
-    memberCount: membersCount || 0,
-    todoCount: todosCount || 0,
-    inProgressCount: inProgressesCount || 0,
-    doneCount: donesCount || 0,
-    createAt: undefined,
-    updateAt: undefined,
-  };
+ 
+  return new projectResponseDto({
+    id: project.id,
+    name: project.name,
+    description: project.description,
+    memberCount: (await projectRepository.projectMemberCount(projectId)) ?? 0,
+    todoCount: (await projectRepository.todoCount(projectId)) ?? 0,
+    inProgressCount: (await projectRepository.inProgressCount(projectId)) ?? 0,
+    doneCount: (await projectRepository.doneCount(projectId)) ?? 0
+  });
 }
+
 export async function updateProject(
   projectId: string,
-  data: Pick<Project, 'name' | 'description'>
-) {
-  const project = await projectRepository.getProject(projectId);
-  if (!project) {
+  data: CreatedProjectInput
+) : Promise<projectResponseDto> {
+
+  const exctingProject = await projectRepository.getProject(projectId);
+  
+  if (!exctingProject) {
     throw new InvalidDataFormatError();
   }
-  if (project.ownerId !== projectId) {
+
+  if (exctingProject.ownerId !== projectId) {
     throw new NotProjectOwnerError();
   }
-  const updatedProject = await projectRepository.updateProject(projectId, data);
-  const membersCount = await projectRepository.projectMemberCount(projectId);
-  const todosCount = await projectRepository.todoCount(projectId);
-  const inProgressesCount = await projectRepository.inProgressCount(projectId);
-  const donesCount = await projectRepository.doneCount(projectId);
-  return {
-    ...updatedProject,
-    memberCount: membersCount || 0,
-    todoCount: todosCount || 0,
-    inProgressCount: inProgressesCount || 0,
-    doneCount: donesCount || 0,
-    createAt: undefined,
-    updateAt: undefined,
-  };
+
+  const dto = new projectUpdateDto(data);
+
+  const updatedProject = await projectRepository.updateProject(projectId, dto);
+
+  return new projectResponseDto({
+    id: updatedProject.id,
+    name: updatedProject.name,
+    description: updatedProject.description,
+    memberCount: (await projectRepository.projectMemberCount(projectId)) ?? 0,
+    todoCount: (await projectRepository.todoCount(projectId)) ?? 0,
+    inProgressCount: (await projectRepository.inProgressCount(projectId)) ?? 0,
+    doneCount: (await projectRepository.doneCount(projectId)) ?? 0
+  });
 }
+
 export async function deleteProject(projectId: string) {
-  const project = await projectRepository.getProject(projectId);
-  if (!project) {
+  
+  const exctingProject = await projectRepository.getProject(projectId);
+  
+  if (!exctingProject) {
     throw new InvalidDataFormatError();
   }
-  if (project.ownerId !== projectId) {
+  
+  if (exctingProject.ownerId !== projectId) {
     throw new NotProjectOwnerError();
   }
-  const deletedProject = await projectRepository.deleteProject(projectId);
-  return deletedProject;
+  
+  return await projectRepository.deleteProject(projectId);
 }

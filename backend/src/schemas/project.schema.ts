@@ -8,7 +8,8 @@ export const createdProjectSchema = z.object({
   description: z
     .string()
     .min(5, { message: '프로젝트 내용은 최소 5자 부터 압력 가능합니다.' })
-    .max(40, { message: '프로젝트 내용은 최대 40자까지 입력 가능합니다' }),
+    .max(40, { message: '프로젝트 내용은 최대 40자까지 입력 가능합니다' })
+    .optional(),
 });
 
 export type CreatedProjectInput = z.infer<typeof createdProjectSchema>;
